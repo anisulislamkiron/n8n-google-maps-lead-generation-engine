@@ -2,6 +2,8 @@
 Enterprise B2B Lead Generation Engine: Automated Pipeline Built via n8n, Google Places API v1, JavaScript Deduplication, and Telegram Ops Monitoring
 A production-grade asynchronous data pipeline built in n8n that automates localized B2B lead generation. Features dynamic Google Sheets campaign management, paginated Google Places API parsing, an optimized JavaScript deduplication logic core, and automated DevOps alerts via Telegram.
 
+Loom Video Link- https://www.loom.com/share/a3911b989bcc43a9ae70b31c1cab3a30
+
 # Enterprise B2B Lead Generation Engine: Automated Pipeline Built via n8n, Google Places API, and JavaScript Engine
 
 [![n8n Version](https://img.shields.io/badge/n8n-v1.0+-ff6f61.svg?style=flat-square)](https://n8n.io/)
