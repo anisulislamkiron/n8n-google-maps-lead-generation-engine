@@ -1,0 +1,637 @@
+{
+  "name": "Workflow 1: Google Maps Lead Collector (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "7362664f-fef2-4fad-9fa0-aba360402102",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k",
+          "mode": "list",
+          "cachedResultName": "AI Lead Generation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Campaigns",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "c1132cb5-d6fa-40f4-ae7e-153723f65876",
+      "name": "Read Campaigns",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        224,
+        288
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2DxzzYQwaymkbBdd",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.Status }}",
+              "value2": "Active"
+            }
+          ]
+        }
+      },
+      "id": "133d6ef4-3d70-46e8-9221-45c8639f9258",
+      "name": "Filter Active",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [
+        448,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "query",
+              "value": "={{ $json['Business Type'] }} {{ $json['City'] }} {{ $json['Country'] }}"
+            },
+            {
+              "name": "CampaignName",
+              "value": "={{ $json['Business Type'] }} in {{ $json['City'] }}"
+            },
+            {
+              "name": "City",
+              "value": "={{ $json['City'] }}"
+            },
+            {
+              "name": "Country",
+              "value": "={{ $json['Country'] }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "DailyLimit",
+              "value": "={{ $json['Daily Lead Limit'] || 50 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "997f15ff-0977-43ae-81d1-5ee8ebecfbe8",
+      "name": "Build Search Query",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        672,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://places.googleapis.com/v1/places:searchText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Goog-FieldMask",
+              "value": "places.displayName,places.formattedAddress,places.location,places.googleMapsUri,places.rating,places.userRatingCount,places.internationalPhoneNumber,places.websiteUri,places.types,nextPageToken"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"textQuery\": \"{{ $json.query }}\",\n  \"maxResultCount\": 20\n}",
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "pageToken",
+                    "value": "={{ $response.body.nextPageToken }}"
+                  }
+                ]
+              },
+              "limitPagesFetched": true,
+              "maxRequests": 3,
+              "requestInterval": 1000
+            }
+          }
+        }
+      },
+      "id": "8327d43d-b786-4b8f-ac2b-06e2d62a64e7",
+      "name": "Search Places API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        896,
+        288
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "LeEDwsLlrVaiUp7Z",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "b670f510-2143-4722-9d3a-ec3c2f636884",
+              "leftValue": "={{ $json.places ? $json.places.length : 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "db4a7dbb-6847-4210-84d0-c2f209262781",
+      "name": "Has Places?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const newLeads = $('Split Leads').all();\nlet existingLeads = [];\n\ntry {\n  const nodeData = $('Get Existing Leads').all();\n  if (nodeData && Array.isArray(nodeData)) {\n    existingLeads = nodeData.filter(item => item && item.json);\n  }\n} catch (e) {\n  console.log(\"No existing leads found yet\");\n}\n\nconst existingWebsites = new Set();\nconst existingMapUrls = new Set();\n\nexistingLeads.forEach(lead => {\n  const website = lead.json['Website'] || '';\n  const mapUrl = lead.json['Google Maps URL'] || '';\n  if (website) existingWebsites.add(website.toString().toLowerCase().trim().replace(/\\/$/, ''));\n  if (mapUrl) existingMapUrls.add(mapUrl.toString().toLowerCase().trim().replace(/\\/$/, ''));\n});\n\nconst today = new Date().toISOString().split('T')[0];\nconst filtered = [];\n\nnewLeads.forEach(lead => {\n  const website = lead.json.websiteUri || '';\n  const mapUrl = lead.json.googleMapsUri || '';\n  \n  // FLEXIBLE NAME SEARCH: Try displayName, then fallback to 'Unknown Business'\n  const name = lead.json.displayName?.text || lead.json.name || \"Unknown Business\";\n  \n  const normWebsite = website.toString().toLowerCase().trim().replace(/\\/$/, '');\n  const normMapUrl = mapUrl.toString().toLowerCase().trim().replace(/\\/$/, '');\n\n  const websiteExists = normWebsite && existingWebsites.has(normWebsite);\n  const mapUrlExists = normMapUrl && existingMapUrls.has(normMapUrl);\n\n  if (!websiteExists && !mapUrlExists) {\n    filtered.push({\n      json: {\n        \"Date\": today,\n        \"Business Name\": name,\n        \"Category\": lead.json.types && lead.json.types.length > 0 ? lead.json.types[0] : '',\n        \"Address\": lead.json.formattedAddress || '',\n        \"City\": lead.json.City || '',\n        \"Country\": lead.json.Country || '',\n        \"Phone\": lead.json.internationalPhoneNumber || '',\n        \"Website\": website,\n        \"Rating\": lead.json.rating || '',\n        \"Reviews\": lead.json.userRatingCount || 0,\n        \"Google Maps URL\": mapUrl,\n        \"Status\": \"Pending Analysis\",\n        \"Public Email\": \"\",\n        \"Owner Name\": \"\",\n        \"Facebook\": \"\",\n        \"Instagram\": \"\",\n        \"LinkedIn\": \"\",\n        \"Business Summary\": \"\",\n        \"Website Score\": \"\",\n        \"Lead Score\": \"\"\n      }\n    });\n  }\n});\n\nreturn filtered;"
+      },
+      "id": "c96b2c6c-dcd6-4e83-835b-c297e0b40665",
+      "name": "Duplicate Filter & Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        272
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "fa4d9dfe-69d8-4f11-a948-2492f82d285a",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0457f0ed-f423-42c8-a066-f97eec68b4cb",
+      "name": "Has New Leads?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k",
+          "mode": "list",
+          "cachedResultName": "AI Lead Generation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 576778064,
+          "mode": "list",
+          "cachedResultName": "Raw Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k/edit#gid=576778064"
+        },
+        "dataMode": "autoMapInputData",
+        "options": {}
+      },
+      "id": "59319ec6-2c5a-46bd-ac68-2fa61970a533",
+      "name": "Save Raw Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        2688,
+        176
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2DxzzYQwaymkbBdd",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5402528372",
+        "text": "=📊 **Lead Collection Summary**\n\n**Campaign**: {{ $('Build Search Query').first().json.CampaignName }}\n**Collected**: {{ $('Split Leads').all().length }}\n**Saved**: {{ $('Duplicate Filter & Format').all().length }}\n**Duplicates Skipped**: {{ $('Split Leads').all().length - $('Duplicate Filter & Format').all().length }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "1467fa6a-226a-47ba-95d2-ed5251adca89",
+      "name": "Telegram Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2912,
+        176
+      ],
+      "webhookId": "6b2aeca7-5689-42b3-87b5-ba358976c76f",
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "MAowc4d9AyykBQ2u",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5402528372",
+        "text": "=ℹ️ **Lead Collection Notice**\n\n**Campaign**: {{ $('Build Search Query').first().json.CampaignName }}\nNo new leads saved. All {{ $('Split Out Places').all().length }} collected leads already exist in database.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "f29f6f82-3dcd-4ae4-a55f-c109679b5afc",
+      "name": "Telegram No New Leads",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2752,
+        432
+      ],
+      "webhookId": "0274b87d-ec02-4d34-ba08-17c7297832c0",
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "MAowc4d9AyykBQ2u",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k",
+          "mode": "list",
+          "cachedResultName": "AI Lead Generation Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 576778064,
+          "mode": "list",
+          "cachedResultName": "Raw Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bNRdRik7cMDRfcj-UEppkP-zKc4gqgw2MtmHx6NSJ5k/edit#gid=576778064"
+        },
+        "options": {}
+      },
+      "id": "0d47c363-49ab-44b5-bf4a-3a028ebc154a",
+      "name": "Get Existing Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        1392,
+        112
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2DxzzYQwaymkbBdd",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5402528372",
+        "text": "=⚠️ **Lead Collection Warning**\n\nNo places found for query: `{{ $('Build Search Query').first().json.query }}`\nCampaign: `{{ $('Build Search Query').first().json.CampaignName }}`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "208eef4f-d566-4e60-b445-3d42695ab6bc",
+      "name": "Telegram No Places",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        464
+      ],
+      "webhookId": "6c8c2954-427e-425b-b565-3d6031ed4443",
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "MAowc4d9AyykBQ2u",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "fa994025-6122-4e20-ac64-b76dce356ea8",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=❌ **Lead Collector Workflow Error**\n\n**Workflow**: {{ $workflow.name }}\n**Node**: {{ $json.execution.error.node.name }}\n**Message**: {{ $json.execution.error.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "c7754adf-72dc-4026-8e2e-79668325d986",
+      "name": "Telegram Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        704
+      ],
+      "webhookId": "ac6afadd-2a1c-407d-bcc7-81f9af97a1f5",
+      "credentials": {
+        "telegramApi": {
+          "id": "MAowc4d9AyykBQ2u",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1872,
+        272
+      ],
+      "id": "a38a480d-56f1-4ef4-bd35-667bdd982991",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Create an empty master list to hold all leads from all pages\nlet allLeads = [];\nconst token = $json.nextPageToken || '';\n\n// 2. Loop through EVERY item (every page) coming from the API node\nfor (const item of $input.all()) {\n  const places = item.json.places;\n  \n  // If this page has leads, add them to our master list\n  if (places && Array.isArray(places)) {\n    allLeads = allLeads.concat(places);\n  }\n}\n\nif (allLeads.length === 0) {\n  return []; // Return nothing if no leads were found on any page\n}\n\n// 3. Turn the master list into individual n8n items\nreturn allLeads.map(place => {\n  return {\n    json: {\n      ...place,\n      nextPageToken: token\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        288
+      ],
+      "id": "be85dadb-9f29-4ed9-832d-150abc6d1d41",
+      "name": "Split Leads"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Filter Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Active": {
+      "main": [
+        [
+          {
+            "node": "Build Search Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Search Query": {
+      "main": [
+        [
+          {
+            "node": "Search Places API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Places API": {
+      "main": [
+        [
+          {
+            "node": "Has Places?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Places?": {
+      "main": [
+        [
+          {
+            "node": "Get Existing Leads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram No Places",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Filter & Format": {
+      "main": [
+        [
+          {
+            "node": "Has New Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has New Leads?": {
+      "main": [
+        [
+          {
+            "node": "Save Raw Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram No New Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Raw Leads": {
+      "main": [
+        [
+          {
+            "node": "Telegram Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Success": {
+      "main": [
+        []
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Telegram Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Leads": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Filter & Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Leads": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fe2f5014-44fe-4f97-9eec-a449ac00e330",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d997dde6c780f43667d5c1b72485201e2da53e84ddad19d266ede71a012f8502"
+  },
+  "nodeGroups": [],
+  "id": "SV4TIEeGpQYBpCoq",
+  "tags": []
+}
